@@ -3,376 +3,282 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Warranty Guard - ระบบจัดการและแจ้งเตือนวันหมดอายุประกัน</title>
+  <title>Warranty Guard - ระบบบริหารจัดการและติดตามประกันอุปกรณ์</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     body {
       font-family: 'Prompt', sans-serif;
-      background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 100%);
-    }
-    .font-mono-code {
-      font-family: 'JetBrains Mono', monospace;
+      background-color: #f1f6fa;
     }
   </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col">
+<body class="min-h-screen flex flex-col justify-between text-slate-700 antialiased">
 
-  <!-- Navigation Bar -->
-  <header class="bg-white/80 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-100 py-3 px-6 sm:px-16 sticky top-0 z-20">
+    <div class="max-w-[1200px] mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-500 text-white flex items-center justify-center shadow-md shadow-sky-500/20">
-          <i data-lucide="shield-check" class="w-5 h-5"></i>
-        </div>
+        <div class="w-10 h-10 rounded-full bg-[#0088cc] flex-shrink-0"></div>
         <div>
-          <span class="text-base font-bold text-slate-900 tracking-tight">Warranty Guard</span>
-          <span class="block text-[11px] text-sky-600 font-medium">ระบบบริหารจัดการและติดตามประกันอุปกรณ์</span>
+          <h1 class="text-sm sm:text-base font-bold text-slate-900 leading-tight">Warranty Guard</h1>
+          <p class="text-[11px] text-[#0088cc] font-medium leading-none mt-0.5">ระบบบริหารจัดการและติดตามประกันอุปกรณ์</p>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-100/80">
-          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span id="header-user-name" class="text-xs font-medium text-sky-950">ผู้ใช้งาน</span>
-        </div>
-        <button onclick="logout()" title="ออกจากระบบ" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
+        <!-- ปุ่มเปิดประวัติการแจ้งเตือน -->
+        <button onclick="toggleLogModal(true)" title="ประวัติการแจ้งเตือน" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-600 transition">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span id="log-badge" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500"></span>
         </button>
+
+        <!-- สถานะผู้ใช้และปุ่ม Logout -->
+        <div class="relative">
+          <button id="admin-btn" onclick="toggleDropdown()" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/80 hover:bg-slate-200 text-slate-700 text-xs transition">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span id="display-username" class="font-medium">admin</span>
+          </button>
+
+          <div id="logout-menu" class="hidden absolute right-0 mt-2 w-36 bg-white border border-slate-100 rounded-2xl shadow-xl py-1.5 z-30">
+            <button onclick="handleLogout()" class="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition font-medium">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              <span>ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 flex-1 w-full">
-
-    <!-- Panoramic Warranty Capsule (แทนการ์ด 4 กล่องเดิม) -->
-    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-sky-100/80 shadow-sm relative overflow-hidden">
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        
-        <!-- Left: Ratio & Status Header -->
-        <div class="space-y-2">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-100">
-            <i data-lucide="activity" class="w-3.5 h-3.5 text-sky-500"></i>
-            สถานะความคุ้มครองโดยรวม
+  <!-- Main Container -->
+  <main class="max-w-[1200px] mx-auto w-full px-4 sm:px-8 py-8 space-y-6 flex-1">
+    <!-- Card 1: สรุปภาพรวม -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100/60 space-y-6">
+      <div class="flex flex-col md:flex-row justify-between md:items-center gap-6">
+        <div>
+          <span class="inline-block px-3 py-1 rounded-full bg-[#f0f8ff] text-[#0088cc] text-[11px] font-medium mb-3">สถานะความคุ้มครองโดยรวม</span>
+          <div class="flex items-baseline gap-2">
+            <span id="stat-percentage" class="text-4xl sm:text-5xl font-extrabold text-slate-900 leading-none">0%</span>
+            <span class="text-xs sm:text-sm font-semibold text-slate-600">อุปกรณ์ที่มีประกันพร้อมใช้งาน</span>
           </div>
-          <div class="flex items-baseline gap-3">
-            <h2 id="hero-coverage-ratio" class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">0%</h2>
-            <span class="text-sm font-medium text-slate-400">อุปกรณ์ที่มีประกันพร้อมใช้งาน</span>
-          </div>
-          <p id="hero-alert-message" class="text-xs text-slate-500 max-w-lg">
-            ตรวจพบข้อมูลอุปกรณ์ทั้งหมดในบัญชีของคุณ พร้อมระบบแจ้งเตือนอัตโนมัติ
-          </p>
+          <p class="text-[11px] sm:text-xs text-slate-400 mt-2">ตรวจพบข้อมูลอุปกรณ์ทั้งหมดในบัญชีของคุณ พร้อมระบบแจ้งเตือนอัตโนมัติ</p>
         </div>
 
-        <!-- Right: Segmented Metric Ribbon -->
-        <div class="grid grid-cols-3 gap-2 sm:gap-4 p-2 bg-slate-50/80 rounded-2xl border border-slate-100">
-          
-          <div class="px-4 py-3 bg-white rounded-xl shadow-xs border border-slate-100 text-center">
-            <div class="text-[11px] font-medium text-slate-400">ทั้งหมด</div>
-            <div id="stat-total" class="text-2xl font-bold text-slate-800 mt-0.5">0</div>
-            <div class="text-[10px] text-slate-400">ชิ้น</div>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <div class="border border-slate-100 rounded-2xl px-5 py-3 min-w-[85px] sm:min-w-[90px] text-center bg-slate-50/40">
+            <div class="text-[10px] text-slate-400 font-medium">ทั้งหมด</div>
+            <div id="stat-total" class="text-xl sm:text-2xl font-bold text-slate-800 my-0.5">0</div>
+            <div class="text-[9px] text-slate-400">ชิ้น</div>
           </div>
-
-          <div class="px-4 py-3 bg-white rounded-xl shadow-xs border border-slate-100 text-center">
-            <div class="text-[11px] font-medium text-emerald-600">อยู่ในประกัน</div>
-            <div id="stat-valid" class="text-2xl font-bold text-emerald-600 mt-0.5">0</div>
-            <div class="text-[10px] text-emerald-500">พร้อมเคลม</div>
+          <div class="border border-slate-100 rounded-2xl px-5 py-3 min-w-[85px] sm:min-w-[90px] text-center bg-slate-50/40">
+            <div class="text-[10px] text-emerald-600 font-medium">อยู่ในประกัน</div>
+            <div id="stat-active" class="text-xl sm:text-2xl font-bold text-emerald-600 my-0.5">0</div>
+            <div class="text-[9px] text-emerald-500">พร้อมเคลม</div>
           </div>
-
-          <div class="px-4 py-3 bg-white rounded-xl shadow-xs border border-slate-100 text-center">
-            <div class="text-[11px] font-medium text-rose-500">หมดประกัน</div>
-            <div id="stat-expired" class="text-2xl font-bold text-rose-500 mt-0.5">0</div>
-            <div class="text-[10px] text-rose-400">สิ้นสุดสิทธิ์</div>
+          <div class="border border-slate-100 rounded-2xl px-5 py-3 min-w-[85px] sm:min-w-[90px] text-center bg-slate-50/40">
+            <div class="text-[10px] text-rose-500 font-medium">หมดประกัน</div>
+            <div id="stat-expired" class="text-xl sm:text-2xl font-bold text-rose-500 my-0.5">0</div>
+            <div class="text-[9px] text-rose-400">สิ้นสุดสิทธิ์</div>
           </div>
-
-        </div>
-
-      </div>
-
-      <!-- Integrated Visual Track (หลอดประมวลผลสัดส่วนแบบ Panorama) -->
-      <div class="mt-6 pt-6 border-t border-slate-100">
-        <div class="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
-          <span class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ปกติ
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 ml-2"></span> ใกล้หมดสัญญา
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ml-2"></span> หมดอายุแล้ว
-          </span>
-          <span id="stat-expiring-soon" class="text-amber-600 font-semibold">0 รายการใกล้หมดอายุ</span>
-        </div>
-
-        <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex gap-0.5 p-0.5">
-          <div id="bar-valid" class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
-          <div id="bar-warning" class="bg-amber-400 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
-          <div id="bar-expired" class="bg-rose-500 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
         </div>
       </div>
-    </section>
 
-    <!-- Equipment List Table -->
-    <section class="bg-white rounded-3xl border border-sky-100/80 shadow-sm overflow-hidden">
-      
-      <!-- Toolbar -->
-      <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/40">
-        <div class="flex flex-1 items-center gap-3">
-          <div class="relative flex-1 max-w-md">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="search-input" oninput="renderTable()" placeholder="ค้นหาชื่ออุปกรณ์, ยี่ห้อ หรือ Serial Number..." class="w-full pl-10 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500">
+      <div class="space-y-3 pt-1">
+        <div class="flex flex-wrap items-center justify-between text-[11px] gap-2">
+          <div class="flex items-center gap-4 text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> ปกติ</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span> ใกล้หมดสัญญา</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> หมดอายุแล้ว</span>
           </div>
-          
-          <select id="filter-status" onchange="renderTable()" class="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 text-slate-600">
-            <option value="all">สถานะทั้งหมด</option>
-            <option value="valid">ยังอยู่ในประกัน</option>
-            <option value="warning">ใกล้หมดประกัน (เหลือน้อยกว่า 30 วัน)</option>
-            <option value="expired">หมดอายุประกันแล้ว</option>
+          <div id="stat-expiring" class="text-amber-500 font-medium">0 รายการใกล้หมดอายุ</div>
+        </div>
+        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+          <div id="stat-progress-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: ตารางรายการอุปกรณ์ -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100/60 space-y-5">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
+          <div class="relative w-full sm:w-80">
+            <input type="text" id="search-box" oninput="applyFilters()" placeholder="ค้นหาชื่ออุปกรณ์, ยี่ห้อ หรือ Serial Number..." class="w-full px-4 py-2 bg-white border border-slate-200/80 rounded-xl text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#0088cc]">
+          </div>
+          <select id="filter-dropdown" onchange="applyFilters()" class="w-full sm:w-44 px-3 py-2 bg-white border border-slate-200/80 rounded-xl text-xs text-slate-600 focus:outline-none focus:border-[#0088cc]">
+            <option value="ALL">สถานะทั้งหมด</option>
+            <option value="ACTIVE">อยู่ในประกัน</option>
+            <option value="EXPIRING">ใกล้หมดสัญญา</option>
+            <option value="EXPIRED">หมดประกันแล้ว</option>
           </select>
         </div>
 
-        <a href="add-equipment.html" class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs shadow-sm transition flex items-center justify-center gap-2">
-          <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มอุปกรณ์ใหม่
-        </a>
+        <button onclick="toggleModal(true)" class="w-full sm:w-auto px-5 py-2 rounded-xl bg-[#0088cc] hover:bg-[#0077b3] text-white text-xs font-semibold shadow-sm transition">
+          เพิ่มอุปกรณ์ใหม่
+        </button>
       </div>
 
-      <!-- Table View -->
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs text-slate-600">
-          <thead class="bg-slate-50/75 text-slate-400 font-semibold border-b border-slate-100">
-            <tr>
-              <th class="py-4 px-6">ชื่ออุปกรณ์ / หมวดหมู่</th>
-              <th class="py-4 px-6">Serial Number (S/N)</th>
-              <th class="py-4 px-6">ช่วงเวลาคุ้มครอง</th>
-              <th class="py-4 px-6 min-w-[220px]">เวลาคงเหลือ</th>
-              <th class="py-4 px-6 text-center">หลักฐาน</th>
-              <th class="py-4 px-6 text-center">จัดการ</th>
+      <div class="overflow-x-auto min-h-[160px]">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="text-slate-400 border-b border-slate-100 font-medium">
+              <th class="py-3 px-3">ชื่ออุปกรณ์ / หมวดหมู่</th>
+              <th class="py-3 px-3">Serial Number (S/N)</th>
+              <th class="py-3 px-3">ช่วงเวลาคุ้มครอง</th>
+              <th class="py-3 px-3">เวลาคงเหลือ</th>
+              <th class="py-3 px-3 text-center">หลักฐาน</th>
+              <th class="py-3 px-3 text-right">จัดการ</th>
             </tr>
           </thead>
-          <tbody id="equipment-tbody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="6" class="text-center py-12 text-slate-400">กำลังโหลดรายการอุปกรณ์...</td>
-            </tr>
+          <tbody id="table-body" class="divide-y divide-slate-50 text-slate-600">
+            <tr><td colspan="6" class="text-center py-12 text-slate-400">กำลังโหลดรายการอุปกรณ์...</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 bg-slate-50/30">
-        <span id="table-summary">แสดง 0 รายการ</span>
-        <span class="text-[11px] text-sky-600 font-medium">ระบบอัปเดตสถานะอัตโนมัติ</span>
+      <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-50">
+        <div id="row-count">แสดง 0 รายการ</div>
+        <div class="text-[#0088cc]">ระบบอัปเดตสถานะอัตโนมัติ</div>
       </div>
-    </section>
-
+    </div>
   </main>
 
-  <footer class="bg-white border-t border-slate-100 py-4 px-6 text-center text-xs text-slate-400 mt-auto">
-    <p>Warranty Guard • ระบบจัดการข้อมูลและแจ้งเตือนวันหมดอายุการรับประกันอุปกรณ์</p>
+  <footer class="py-6 text-center text-xs text-slate-400">
+    Warranty Guard • ระบบจัดการข้อมูลและแจ้งเตือนวันหมดอายุการรับประกันอุปกรณ์[cite: 15]
   </footer>
 
-  <script src="js/config.js"></script>
+  <!-- Modal สำหรับเพิ่มอุปกรณ์ -->
+  <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl border border-slate-100 relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-bold text-slate-800">เพิ่มอุปกรณ์ใหม่</h3>
+        <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div id="form-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+        <span id="form-error-msg"></span>
+      </div>
+
+      <form id="add-form" onsubmit="saveNewEquipment(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">ชื่ออุปกรณ์</label>
+          <input type="text" id="inp-name" required placeholder="เช่น MacBook Pro M3" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0088cc]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">ยี่ห้อ / หมวดหมู่</label>
+            <input type="text" id="inp-brand" required placeholder="เช่น Apple" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0088cc]">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Serial Number (S/N)</label>
+            <input type="text" id="inp-serial" required oninput="sanitizeSerialNumber(this)" placeholder="เช่น C02G80XZMD6R" class="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono uppercase focus:outline-none focus:border-[#0088cc]">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">วันที่ซื้อ</label>
+            <input type="date" id="inp-purchase" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0088cc]">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">วันหมดประกัน</label>
+            <input type="date" id="inp-expiry" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0088cc]">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">แนบรูปใบเสร็จ / ใบรับประกัน (ไม่เกิน 5MB)</label>
+          <input type="file" id="inp-receipt" accept="image/*" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-sky-50 file:text-[#0088cc] hover:file:bg-sky-100">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-[#0088cc] hover:bg-[#0077b3] text-white font-semibold transition mt-3">บันทึกข้อมูลอุปกรณ์</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal สำหรับดูพรีวิวรูปใบเสร็จ -->
+  <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-xl shadow-2xl border border-slate-100 relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 id="preview-title" class="text-sm font-bold text-slate-800">หลักฐานใบเสร็จรับเงิน</h3>
+          <p id="preview-subtitle" class="text-[11px] text-slate-400 mt-0.5"></p>
+        </div>
+        <button onclick="closePreviewModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-50 rounded-2xl p-2 border border-slate-100">
+        <img id="preview-image" src="" alt="ใบเสร็จ" class="max-w-full h-auto rounded-xl object-contain shadow-sm">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <a id="preview-download" href="" download="receipt.png" class="px-4 py-2 rounded-xl bg-[#0088cc] hover:bg-[#0077b3] text-white text-xs font-medium flex items-center gap-1.5 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>ดาวน์โหลดรูปภาพ</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal สำหรับดูประวัติ Log แจ้งเตือน -->
+  <div id="log-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl border border-slate-100 relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-sky-50 text-[#0088cc] flex items-center justify-center"><i data-lucide="history" class="w-4 h-4"></i></div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-800">ประวัติการส่งแจ้งเตือน (Notification Logs)</h3>
+            <p class="text-[11px] text-slate-400">บันทึกประวัติการส่งแจ้งเตือนสถานะประกันอุปกรณ์ทั้งหมด</p>
+          </div>
+        </div>
+        <button onclick="toggleLogModal(false)" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="max-h-[50vh] overflow-y-auto space-y-2.5 pr-1" id="log-list-container"></div>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+        <button onclick="clearNotificationLogs()" class="text-slate-400 hover:text-rose-500 transition flex items-center gap-1 text-[11px]">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>ล้างประวัติทั้งหมด</span>
+        </button>
+        <button onclick="toggleLogModal(false)" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- เชื่อมต่อสคริปต์ตามโครงสร้างโฟลเดอร์ js/ ที่มีอยู่แล้ว -->
   <script src="js/auth.js"></script>
+  <script src="js/tracker.js"></script>
+  <script src="js/ui.js"></script>
   <script>
-    checkAuth(true);
-    setupHeaderUser();
+    lucide.createIcons();
 
-    let equipmentsData = [];
-
-    function getRemainingDays(expireDateStr) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const expDate = new Date(expireDateStr);
-      expDate.setHours(0, 0, 0, 0);
-      return Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+    // ดึงชื่อผู้ใช้และจัดการ Dropdown Menu
+    const currentUser = JSON.parse(localStorage.getItem('warranty_user') || 'null');
+    if (!localStorage.getItem('warranty_token')) {
+      window.location.href = 'login.html';
+    } else if (currentUser && document.getElementById('display-username')) {
+      document.getElementById('display-username').textContent = currentUser.name || currentUser.email || 'admin';
     }
 
-    function getWarrantyProgress(buyDateStr, expireDateStr) {
-      const start = new Date(buyDateStr).getTime();
-      const end = new Date(expireDateStr).getTime();
-      const now = new Date().getTime();
-
-      if (now >= end) return 100;
-      if (now <= start) return 0;
-      return Math.round(((now - start) / (end - start)) * 100);
+    function toggleDropdown() {
+      document.getElementById('logout-menu').classList.toggle('hidden');
     }
 
-    async function loadEquipments() {
-      try {
-        const res = await fetch(`${API_BASE}/equipments`, {
-          headers: { 'Authorization': `Bearer ${getToken()}` }
-        });
-        if (res.status === 401 || res.status === 403) return logout();
-        equipmentsData = await res.json();
+    window.addEventListener('click', (e) => {
+      const btn = document.getElementById('admin-btn');
+      const menu = document.getElementById('logout-menu');
+      if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
 
-        updateDashboardCounters();
-        renderTable();
-      } catch (err) {
-        console.error('Error fetching data:', err);
+    function handleLogout() {
+      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+        localStorage.removeItem('warranty_token');
+        localStorage.removeItem('warranty_user');
+        window.location.href = 'login.html';
       }
     }
-
-    function updateDashboardCounters() {
-      const total = equipmentsData.length;
-      let valid = 0;
-      let warning = 0;
-      let expired = 0;
-
-      equipmentsData.forEach(item => {
-        const days = getRemainingDays(item.expire_date);
-        if (days < 0) {
-          expired++;
-        } else {
-          valid++;
-          if (days <= 30) warning++;
-        }
-      });
-
-      document.getElementById('stat-total').textContent = total;
-      document.getElementById('stat-valid').textContent = valid;
-      document.getElementById('stat-expired').textContent = expired;
-      document.getElementById('stat-expiring-soon').textContent = `${warning} รายการใกล้หมดอายุ (≤30 วัน)`;
-
-      // คำนวณ % ความคุ้มครอง
-      const coverageRatio = total === 0 ? 0 : Math.round((valid / total) * 100);
-      document.getElementById('hero-coverage-ratio').textContent = `${coverageRatio}%`;
-
-      // อัปเดตหลอดไทม์ไลน์ 3 สี
-      const validWidth = total === 0 ? 0 : ((valid - warning) / total) * 100;
-      const warningWidth = total === 0 ? 0 : (warning / total) * 100;
-      const expiredWidth = total === 0 ? 0 : (expired / total) * 100;
-
-      document.getElementById('bar-valid').style.width = `${validWidth}%`;
-      document.getElementById('bar-warning').style.width = `${warningWidth}%`;
-      document.getElementById('bar-expired').style.width = `${expiredWidth}%`;
-
-      const msgEl = document.getElementById('hero-alert-message');
-      if (warning > 0) {
-        msgEl.innerHTML = `พบ <strong class="text-amber-600 font-semibold">${warning} รายการ</strong> กำลังจะหมดระยะเวลารับประกันในอีกไม่ช้า แนะนำให้ตรวจสอบการทำงาน`;
-      } else if (total === 0) {
-        msgEl.textContent = 'ยังไม่มีอุปกรณ์ในรายการ กดเพิ่มอุปกรณ์ใหม่เพื่อเริ่มบันทึกข้อมูลประกัน';
-      } else {
-        msgEl.textContent = 'อุปกรณ์ส่วนใหญ่อยู่ในระยะเวลารับประกันปกติ พร้อมสิทธิประโยชน์ในการซ่อมบำรุง';
-      }
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById('equipment-tbody');
-      const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-      const filter = document.getElementById('filter-status').value;
-
-      const filtered = equipmentsData.filter(item => {
-        const days = getRemainingDays(item.expire_date);
-        
-        let matchFilter = true;
-        if (filter === 'valid') matchFilter = days >= 0;
-        if (filter === 'warning') matchFilter = days >= 0 && days <= 30;
-        if (filter === 'expired') matchFilter = days < 0;
-
-        const matchSearch = 
-          (item.name && item.name.toLowerCase().includes(keyword)) ||
-          (item.brand && item.brand.toLowerCase().includes(keyword)) ||
-          (item.serial_number && item.serial_number.toLowerCase().includes(keyword));
-
-        return matchFilter && matchSearch;
-      });
-
-      document.getElementById('table-summary').textContent = `แสดง ${filtered.length} จากทั้งหมด ${equipmentsData.length} รายการ`;
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="text-center py-12 text-slate-400">
-              <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
-              ไม่พบรายการอุปกรณ์ตามเงื่อนไข
-            </td>
-          </tr>
-        `;
-        lucide.createIcons();
-        return;
-      }
-
-      tbody.innerHTML = filtered.map(item => {
-        const days = getRemainingDays(item.expire_date);
-        const progress = getWarrantyProgress(item.buy_date, item.expire_date);
-        const isExpired = days < 0;
-        const isWarning = days >= 0 && days <= 30;
-
-        let statusTag = '';
-        let barColor = 'bg-sky-500';
-
-        if (isExpired) {
-          statusTag = '<span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-600 border border-rose-100">หมดประกันแล้ว</span>';
-          barColor = 'bg-rose-500';
-        } else if (isWarning) {
-          statusTag = `<span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">เหลืออีก ${days} วัน</span>`;
-          barColor = 'bg-amber-400';
-        } else {
-          statusTag = `<span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">เหลืออีก ${days} วัน</span>`;
-          barColor = 'bg-emerald-500';
-        }
-
-        return `
-          <tr class="hover:bg-slate-50/60 transition">
-            <td class="py-4 px-6">
-              <div class="font-semibold text-slate-800 text-sm">${item.name}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">${item.brand || 'ไม่ระบุยี่ห้อ'} • ${item.category || 'ทั่วไป'}</div>
-            </td>
-            <td class="py-4 px-6">
-              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200">
-                <span class="font-mono-code text-xs text-slate-600">${item.serial_number || '-'}</span>
-                ${item.serial_number ? `
-                  <button onclick="copySN('${item.serial_number}')" title="คัดลอก S/N" class="text-slate-400 hover:text-sky-600">
-                    <i data-lucide="copy" class="w-3 h-3"></i>
-                  </button>
-                ` : ''}
-              </div>
-            </td>
-            <td class="py-4 px-6 text-xs">
-              <div class="text-slate-400">ซื้อ: ${item.buy_date}</div>
-              <div class="font-medium ${isExpired ? 'text-rose-600 font-semibold' : 'text-slate-700'}">หมด: ${item.expire_date}</div>
-            </td>
-            <td class="py-4 px-6">
-              <div class="flex items-center justify-between mb-1.5">
-                ${statusTag}
-                <span class="text-[11px] text-slate-400 font-mono-code">${progress}%</span>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
-              </div>
-            </td>
-            <td class="py-4 px-6 text-center">
-              ${item.receipt_image ? `
-                <a href="${item.receipt_image}" target="_blank" class="inline-flex items-center gap-1 text-xs text-sky-600 hover:underline">
-                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i> ใบเสร็จ
-                </a>
-              ` : '<span class="text-slate-300">-</span>'}
-            </td>
-            <td class="py-4 px-6 text-center">
-              <button onclick="deleteEquipment(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="ลบรายการ">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      lucide.createIcons();
-    }
-
-    function copySN(sn) {
-      navigator.clipboard.writeText(sn);
-      alert('คัดลอก Serial Number แล้ว: ' + sn);
-    }
-
-    async function deleteEquipment(id) {
-      if (!confirm('ยืนยันการลบรายการอุปกรณ์นี้?')) return;
-      await fetch(`${API_BASE}/equipments/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` }
-      });
-      loadEquipments();
-    }
-
-    loadEquipments();
   </script>
 </body>
 </html>

@@ -1,33 +1,31 @@
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function getUser() {
-  const user = localStorage.getItem(USER_KEY);
+// ดึงข้อมูลผู้ใช้ปัจจุบันที่ล็อกอินอยู่
+function getCurrentUser() {
+  const user = localStorage.getItem(CONFIG.USER_KEY || 'warranty_user');
   return user ? JSON.parse(user) : null;
 }
 
-function checkAuth(requireAuth = true) {
-  const token = getToken();
-  const isLoginPage = window.location.pathname.includes('login.html');
-
-  if (requireAuth && !token && !isLoginPage) {
+// ตรวจสอบว่าเข้าสู่ระบบหรือยัง ถ้ายังให้เด้งไปหน้า login.html
+function checkAuth() {
+  const token = localStorage.getItem(CONFIG.TOKEN_KEY || 'warranty_token');
+  if (!token) {
     window.location.href = 'login.html';
-  } else if (!requireAuth && token && isLoginPage) {
-    window.location.href = 'index.html';
   }
 }
 
+// ฟังก์ชันออกจากระบบ
 function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  window.location.href = 'login.html';
-}
-
-function setupHeaderUser() {
-  const user = getUser();
-  const userNameEl = document.getElementById('header-user-name');
-  if (user && userNameEl) {
-    userNameEl.textContent = user.name;
+  if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+    localStorage.removeItem(CONFIG.TOKEN_KEY || 'warranty_token');
+    localStorage.removeItem(CONFIG.USER_KEY || 'warranty_user');
+    window.location.href = 'login.html';
   }
 }
+
+// อัปเดตแสดงชื่อผู้ใช้และปุ่ม Logout บน Header อัตโนมัติ (หากมี element ในหน้านั้น)
+document.addEventListener('DOMContentLoaded', () => {
+  const user = getCurrentUser();
+  const userNameEl = document.getElementById('user-display-name');
+  if (user && userNameEl) {
+    userNameEl.textContent = user.name || user.email;
+  }
+});
