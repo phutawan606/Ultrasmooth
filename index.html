@@ -31,27 +31,25 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- ปุ่มเปิดประวัติการแจ้งเตือน -->
-        <button onclick="toggleLogModal(true)" title="ประวัติการแจ้งเตือน" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-600 transition">
+        <!-- ปุ่มเปิดประวัติการแจ้งเตือน (กระดิ่ง) -->
+        <button onclick="toggleLogModal(true)" title="ประวัติการแจ้งเตือน" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-600 transition flex items-center justify-center">
           <i data-lucide="bell" class="w-4 h-4"></i>
           <span id="log-badge" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500"></span>
         </button>
 
+        <!-- สถานะผู้ใช้และปุ่ม Dropdown -->
         <div class="relative">
-          <button id="admin-btn" onclick="toggleDropdown()" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/80 hover:bg-slate-200 text-slate-700 text-xs transition">
+          <button id="admin-btn" onclick="toggleDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 hover:bg-slate-200 text-slate-700 text-xs transition cursor-pointer font-medium">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span id="display-username" class="font-medium">admin</span>
+            <span id="display-username">admin</span>
           </button>
 
-
-          <div id="logout-menu" class="hidden absolute right-0 mt-2 w-36 bg-white border border-slate-100 rounded-2xl shadow-xl py-1.5 z-30">
-
+          <!-- เมนูดร็อปดาวน์ (ตั้งค่าบัญชี & ออกจากระบบ) -->
           <div id="logout-menu" class="hidden absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-2xl shadow-xl py-1.5 z-30">
             <button onclick="openUserSettingsModal()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition font-medium border-b border-slate-50">
               <i data-lucide="user-cog" class="w-3.5 h-3.5 text-[#0088cc]"></i>
               <span>ตั้งค่าบัญชีผู้ใช้</span>
             </button>
-
             <button onclick="handleLogout()" class="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition font-medium">
               <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
               <span>ออกจากระบบ</span>
@@ -156,9 +154,6 @@
   </main>
 
   <footer class="py-6 text-center text-xs text-slate-400">
-    Warranty Guard • ระบบจัดการข้อมูลและแจ้งเตือนวันหมดอายุการรับประกันอุปกรณ์[cite: 15]
-  </footer>
-
     Warranty Guard • ระบบจัดการข้อมูลและติดตามวันหมดอายุการรับประกันอุปกรณ์
   </footer>
 
@@ -211,7 +206,7 @@
   </div>
 
   <!-- Modal สำหรับเพิ่มอุปกรณ์ -->
-  <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl border border-slate-100 relative space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-bold text-slate-800">เพิ่มอุปกรณ์ใหม่</h3>
@@ -258,7 +253,7 @@
   </div>
 
   <!-- Modal สำหรับดูพรีวิวรูปใบเสร็จ -->
-  <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 w-full max-w-xl shadow-2xl border border-slate-100 relative space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
@@ -280,7 +275,7 @@
   </div>
 
   <!-- Modal สำหรับดูประวัติ Log แจ้งเตือน -->
-  <div id="log-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="log-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl border border-slate-100 relative space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
@@ -303,24 +298,26 @@
     </div>
   </div>
 
+  <!-- เชื่อมต่อไฟล์ JS -->
   <script src="js/auth.js"></script>
   <script src="js/tracker.js"></script>
   <script src="js/ui.js"></script>
   <script>
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 
-    // ดึงชื่อผู้ใช้และจัดการ Dropdown Menu
+    // ดึงข้อมูลผู้ใช้มาแสดง
     const currentUser = JSON.parse(localStorage.getItem('warranty_user') || 'null');
-    if (!localStorage.getItem('warranty_token')) {
-      window.location.href = 'login.html';
-    } else if (currentUser && document.getElementById('display-username')) {
+    if (currentUser && document.getElementById('display-username')) {
       document.getElementById('display-username').textContent = currentUser.name || currentUser.email || 'admin';
     }
 
+    // ฟังก์ชันเปิด/ปิด Dropdown เมื่อกดปุ่ม admin
     function toggleDropdown() {
-      document.getElementById('logout-menu').classList.toggle('hidden');
+      const menu = document.getElementById('logout-menu');
+      if (menu) menu.classList.toggle('hidden');
     }
 
+    // ปิด Dropdown อัตโนมัติเมื่อคลิกพื้นที่อื่นข้างนอก
     window.addEventListener('click', (e) => {
       const btn = document.getElementById('admin-btn');
       const menu = document.getElementById('logout-menu');
@@ -329,6 +326,7 @@
       }
     });
 
+    // ฟังก์ชัน Logout
     function handleLogout() {
       if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
         localStorage.removeItem('warranty_token');
