@@ -1,10 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-<<<<<<< HEAD
-=======
 const nodemailer = require('nodemailer');
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.routes');
@@ -15,12 +12,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-<<<<<<< HEAD
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes API
-=======
 
 // อ่านไฟล์ static (HTML, JS, CSS) จาก Root Directory
 app.use(express.static(__dirname));
@@ -144,7 +138,6 @@ app.post('/api/notify/email', async (req, res) => {
 });
 
 // Routes API หลัก
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 app.use('/api/auth', authRoutes);
 app.use('/api/equipments', equipmentRoutes);
 

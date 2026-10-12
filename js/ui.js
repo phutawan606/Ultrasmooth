@@ -4,11 +4,6 @@ const LOG_STORAGE_KEY = 'warranty_notification_logs';
 let equipments = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let notificationLogs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
 
-<<<<<<< HEAD
-// --- ระบบบันทึกประวัติการแจ้งเตือน (Logs) ---
-function addNotificationLog(deviceName, serial, type, message, channel = 'LINE / System') {
-=======
-// --- ดึง/อัปเดตข้อมูลผู้ใช้ใน LocalStorage ---
 function getCurrentUser() {
   return JSON.parse(localStorage.getItem('warranty_user') || 'null') || { email: 'user@example.com', isVerified: false };
 }
@@ -117,7 +112,6 @@ async function submitVerifyOTP() {
       user.isVerified = true;
       localStorage.setItem('warranty_user', JSON.stringify(user));
       openUserSettingsModal();
-      // เรียกใช้ระบบส่งแจ้งเตือนอัตโนมัติทันทีหลังจากยืนยัน OTP สำเร็จ
       autoCheckAndNotify();
     } else {
       alert('❌ ' + data.message);
@@ -129,12 +123,11 @@ async function submitVerifyOTP() {
 
 // --- ระบบบันทึกประวัติการแจ้งเตือน (Logs) ---
 function addNotificationLog(deviceName, serial, type, message, channel = 'Gmail SMTP') {
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
   const newLog = {
     id: Date.now() + Math.random(),
     timestamp: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
     deviceName,
-    serial,
+    serial: serial || '-',
     type,
     message,
     channel
@@ -218,11 +211,6 @@ function clearNotificationLogs() {
   }
 }
 
-<<<<<<< HEAD
-// --- ฟังก์ชันดักจับความถูกต้องของฟอร์ม (Validation) ---
-=======
-// --- ฟังก์ชัน Validation ---
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 function sanitizeSerialNumber(input) {
   input.value = input.value.replace(/[^a-zA-Z0-9\-_]/g, '').toUpperCase();
 }
@@ -239,17 +227,14 @@ function clearFormError() {
   if (errBox) errBox.classList.add('hidden');
 }
 
-<<<<<<< HEAD
-// --- การแสดงผลตารางและการ์ดสรุป ---
-=======
-// --- แสดงผลตารางรายการอุปกรณ์ ---
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 function renderTable() {
   const tbody = document.getElementById('table-body');
   if (!tbody) return;
 
-  const q = document.getElementById('search-box').value.toLowerCase().trim();
-  const filter = document.getElementById('filter-dropdown').value;
+  const searchBox = document.getElementById('search-box');
+  const filterDropdown = document.getElementById('filter-dropdown');
+  const q = searchBox ? searchBox.value.toLowerCase().trim() : '';
+  const filter = filterDropdown ? filterDropdown.value : 'ALL';
 
   let total = equipments.length;
   let active = 0;
@@ -274,15 +259,23 @@ function renderTable() {
     return matchText && matchStatus;
   });
 
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-expired').textContent = expired;
-  document.getElementById('stat-expiring').textContent = `${expiring} รายการใกล้หมดอายุ`;
+  const elTotal = document.getElementById('stat-total');
+  const elActive = document.getElementById('stat-active');
+  const elExpired = document.getElementById('stat-expired');
+  const elExpiring = document.getElementById('stat-expiring');
+  const elPct = document.getElementById('stat-percentage');
+  const elProgress = document.getElementById('stat-progress-bar');
+  const elRowCount = document.getElementById('row-count');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elActive) elActive.textContent = active;
+  if (elExpired) elExpired.textContent = expired;
+  if (elExpiring) elExpiring.textContent = `${expiring} รายการใกล้หมดอายุ`;
 
   const pct = total > 0 ? Math.round((active / total) * 100) : 0;
-  document.getElementById('stat-percentage').textContent = `${pct}%`;
-  document.getElementById('stat-progress-bar').style.width = `${pct}%`;
-  document.getElementById('row-count').textContent = `แสดง ${filtered.length} รายการ`;
+  if (elPct) elPct.textContent = `${pct}%`;
+  if (elProgress) elProgress.style.width = `${pct}%`;
+  if (elRowCount) elRowCount.textContent = `แสดง ${filtered.length} รายการ`;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-400">ไม่พบรายการอุปกรณ์</td></tr>`;
@@ -329,14 +322,10 @@ function renderTable() {
         <td class="py-3 px-3 text-center">${receiptBtn}</td>
         <td class="py-3 px-3 text-right">
           <div class="flex items-center justify-end gap-2">
-<<<<<<< HEAD
-            <button onclick="triggerManualAlert(${item.id})" title="ส่งแจ้งเตือนทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
-=======
             <button onclick="triggerManualAlert(${item.id})" title="ส่งแจ้งเตือนเข้า Email ทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
               <i data-lucide="bell-ring" class="w-4 h-4"></i>
             </button>
-            <button onclick="deleteEquipment(${item.id})" class="text-rose-500 hover:text-rose-700 font-medium">ลบ</button>
+            <button onclick="deleteEquipment(${item.id})" class="text-rose-500 hover:text-rose-700 font-medium text-xs">ลบ</button>
           </div>
         </td>
       </tr>
@@ -353,27 +342,12 @@ function applyFilters() {
 
 function deleteEquipment(id) {
   if (confirm('ยืนยันที่จะลบอุปกรณ์นี้หรือไม่?')) {
-    equipments = equipments.filter(e => e.id !== id);
+    equipments = equipments.filter(e => String(e.id) !== String(id));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(equipments));
     renderTable();
   }
 }
 
-<<<<<<< HEAD
-function triggerManualAlert(id) {
-  const item = equipments.find(e => String(e.id) === String(id));
-  if (!item) return;
-
-  const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
-  let alertMsg = `แจ้งเตือนสถานะ: อุปกรณ์ ${item.name} (S/N: ${item.serial_number}) เหลือประกัน ${days} วัน`;
-  if (status === 'EXPIRED') {
-    alertMsg = `แจ้งเตือน: อุปกรณ์ ${item.name} หมดประกันแล้ว`;
-  }
-
-  addNotificationLog(item.name, item.serial_number, status, alertMsg, 'ส่งทันที (Manual/LINE)');
-  alert(`[ส่งแจ้งเตือนสำเร็จ]\n${alertMsg}`);
-  renderTable();
-=======
 // --- ปุ่มยิงส่งอีเมลแจ้งเตือนประกันแบบกดมือ (Manual) ---
 async function triggerManualAlert(id) {
   const item = equipments.find(e => String(e.id) === String(id));
@@ -413,7 +387,6 @@ async function triggerManualAlert(id) {
 // --- ระบบตรวจเช็กวันหมดประกันและยิงแจ้งเตือนเข้าอีเมลอัตโนมัติ 100% ---
 async function autoCheckAndNotify() {
   const user = getCurrentUser();
-  // ส่งแจ้งเตือนอัตโนมัติเฉพาะบัญชีที่ยืนยัน OTP เรียบร้อยแล้วเท่านั้น
   if (!user || !user.isVerified || !user.email) return;
 
   const today = new Date();
@@ -424,13 +397,8 @@ async function autoCheckAndNotify() {
     if (!item.expiry_date) continue;
 
     const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
-
-    // Key สำหรับล็อกว่าวันนี้ส่งแจ้งเตือนสถานะนี้ของอุปกรณ์ชิ้นนี้ไปแล้วหรือยัง (กันยิงซ้ำทุกครั้งที่กดรีเฟรชหน้า)
     const notifyKey = `notified_${item.serial_number}_${status}_${todayStr}`;
 
-    // เงื่อนไขในการส่งอัตโนมัติ:
-    // 1. ใกล้หมดอายุ (status === 'EXPIRING' / days <= 7)
-    // 2. หมดอายุแล้ว (status === 'EXPIRED')
     if ((status === 'EXPIRING' || status === 'EXPIRED') && !localStorage.getItem(notifyKey)) {
       try {
         const res = await fetch('/api/notify/email', {
@@ -460,7 +428,6 @@ async function autoCheckAndNotify() {
       }
     }
   }
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 }
 
 // --- ฟังก์ชัน Modal และ Form ---
@@ -515,12 +482,7 @@ function saveNewEquipment(e) {
     document.getElementById('add-form').reset();
     toggleModal(false);
     renderTable();
-<<<<<<< HEAD
-=======
-
-    // เมื่อเพิ่มอุปกรณ์ใหม่ ตรวจเช็กเพื่อส่งแจ้งเตือนอัตโนมัติทันทีหากอุปกรณ์ที่เพิ่งเพิ่มมีประกันใกล้หมด/หมดแล้ว
     autoCheckAndNotify();
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
   };
 
   if (file) {
@@ -556,20 +518,16 @@ function closePreviewModal() {
 
 // เริ่มต้นระบบเมื่อโหลดหน้าเว็บ
 document.addEventListener('DOMContentLoaded', () => {
-<<<<<<< HEAD
-  autoCheckAndLog(equipments);
-  renderTable();
-  setInterval(() => {
-    autoCheckAndLog(equipments);
-    renderTable();
-  }, 60000);
-=======
   if (typeof autoCheckAndLog === 'function') {
     autoCheckAndLog(equipments);
   }
   renderTable();
-
-  // รันระบบตรวจเช็กประกันอัตโนมัติทันทีที่เปิดเข้าหน้าเว็บ
   autoCheckAndNotify();
->>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
+
+  setInterval(() => {
+    if (typeof autoCheckAndLog === 'function') {
+      autoCheckAndLog(equipments);
+    }
+    renderTable();
+  }, 60000);
 });
