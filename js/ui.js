@@ -4,8 +4,132 @@ const LOG_STORAGE_KEY = 'warranty_notification_logs';
 let equipments = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let notificationLogs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
 
+<<<<<<< HEAD
 // --- ระบบบันทึกประวัติการแจ้งเตือน (Logs) ---
 function addNotificationLog(deviceName, serial, type, message, channel = 'LINE / System') {
+=======
+// --- ดึง/อัปเดตข้อมูลผู้ใช้ใน LocalStorage ---
+function getCurrentUser() {
+  return JSON.parse(localStorage.getItem('warranty_user') || 'null') || { email: 'user@example.com', isVerified: false };
+}
+
+// --- ระบบตั้งค่าบัญชีผู้ใช้ และ ขอ/ยืนยัน OTP ---
+function openUserSettingsModal() {
+  const user = getCurrentUser();
+  const emailInput = document.getElementById('settings-user-email');
+  const statusBadge = document.getElementById('email-verify-status');
+
+  if (emailInput) emailInput.value = user.email || '';
+
+  if (user.isVerified) {
+    if (statusBadge) {
+      statusBadge.textContent = '✅ ยืนยันแล้ว';
+      statusBadge.className = 'text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 rounded-full';
+    }
+    const btnOtp = document.getElementById('btn-send-otp');
+    if (btnOtp) btnOtp.classList.add('hidden');
+  } else {
+    if (statusBadge) {
+      statusBadge.textContent = '⚠️ ยังไม่ยืนยัน';
+      statusBadge.className = 'text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full';
+    }
+    const btnOtp = document.getElementById('btn-send-otp');
+    if (btnOtp) btnOtp.classList.remove('hidden');
+  }
+
+  const modal = document.getElementById('user-settings-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+  const logoutMenu = document.getElementById('logout-menu');
+  if (logoutMenu) logoutMenu.classList.add('hidden');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeUserSettingsModal() {
+  const modal = document.getElementById('user-settings-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  const otpGroup = document.getElementById('otp-input-group');
+  if (otpGroup) otpGroup.classList.add('hidden');
+}
+
+// 1. กดขอ OTP ผ่าน Nodemailer / Gmail SMTP
+async function requestOTP() {
+  const user = getCurrentUser();
+  const btn = document.getElementById('btn-send-otp');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ กำลังส่ง OTP...</span>`;
+  }
+
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alert('ส่งรหัส OTP ไปยังอีเมล ' + user.email + ' เรียบร้อยแล้ว!');
+      const otpGroup = document.getElementById('otp-input-group');
+      if (otpGroup) otpGroup.classList.remove('hidden');
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + data.message);
+    }
+  } catch (err) {
+    alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="mail-check" class="w-4 h-4"></i><span>ส่งรหัส OTP ยืนยันอีเมล</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+// 2. กดยืนยัน OTP
+async function submitVerifyOTP() {
+  const user = getCurrentUser();
+  const otpInput = document.getElementById('otp-code-input');
+  const otp = otpInput ? otpInput.value.trim() : '';
+
+  if (!otp || otp.length !== 6) {
+    alert('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, otp })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alert('🎉 ยืนยันอีเมลสำเร็จ! บัญชีของคุณพร้อมรับการแจ้งเตือนแล้ว');
+      user.isVerified = true;
+      localStorage.setItem('warranty_user', JSON.stringify(user));
+      openUserSettingsModal();
+      // เรียกใช้ระบบส่งแจ้งเตือนอัตโนมัติทันทีหลังจากยืนยัน OTP สำเร็จ
+      autoCheckAndNotify();
+    } else {
+      alert('❌ ' + data.message);
+    }
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการตรวจสอบรหัส OTP');
+  }
+}
+
+// --- ระบบบันทึกประวัติการแจ้งเตือน (Logs) ---
+function addNotificationLog(deviceName, serial, type, message, channel = 'Gmail SMTP') {
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
   const newLog = {
     id: Date.now() + Math.random(),
     timestamp: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
@@ -94,7 +218,11 @@ function clearNotificationLogs() {
   }
 }
 
+<<<<<<< HEAD
 // --- ฟังก์ชันดักจับความถูกต้องของฟอร์ม (Validation) ---
+=======
+// --- ฟังก์ชัน Validation ---
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 function sanitizeSerialNumber(input) {
   input.value = input.value.replace(/[^a-zA-Z0-9\-_]/g, '').toUpperCase();
 }
@@ -111,7 +239,11 @@ function clearFormError() {
   if (errBox) errBox.classList.add('hidden');
 }
 
+<<<<<<< HEAD
 // --- การแสดงผลตารางและการ์ดสรุป ---
+=======
+// --- แสดงผลตารางรายการอุปกรณ์ ---
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 function renderTable() {
   const tbody = document.getElementById('table-body');
   if (!tbody) return;
@@ -197,7 +329,11 @@ function renderTable() {
         <td class="py-3 px-3 text-center">${receiptBtn}</td>
         <td class="py-3 px-3 text-right">
           <div class="flex items-center justify-end gap-2">
+<<<<<<< HEAD
             <button onclick="triggerManualAlert(${item.id})" title="ส่งแจ้งเตือนทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
+=======
+            <button onclick="triggerManualAlert(${item.id})" title="ส่งแจ้งเตือนเข้า Email ทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
               <i data-lucide="bell-ring" class="w-4 h-4"></i>
             </button>
             <button onclick="deleteEquipment(${item.id})" class="text-rose-500 hover:text-rose-700 font-medium">ลบ</button>
@@ -223,6 +359,7 @@ function deleteEquipment(id) {
   }
 }
 
+<<<<<<< HEAD
 function triggerManualAlert(id) {
   const item = equipments.find(e => String(e.id) === String(id));
   if (!item) return;
@@ -236,6 +373,94 @@ function triggerManualAlert(id) {
   addNotificationLog(item.name, item.serial_number, status, alertMsg, 'ส่งทันที (Manual/LINE)');
   alert(`[ส่งแจ้งเตือนสำเร็จ]\n${alertMsg}`);
   renderTable();
+=======
+// --- ปุ่มยิงส่งอีเมลแจ้งเตือนประกันแบบกดมือ (Manual) ---
+async function triggerManualAlert(id) {
+  const item = equipments.find(e => String(e.id) === String(id));
+  if (!item) return;
+
+  const user = getCurrentUser();
+  const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
+
+  try {
+    const res = await fetch('/api/notify/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: user.email,
+        deviceName: item.name,
+        serial: item.serial_number,
+        expiryDate: item.expiry_date,
+        daysLeft: days,
+        status: status
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const alertMsg = `แจ้งเตือนสถานะประกันอุปกรณ์ ${item.name} ส่งเข้าอีเมล ${user.email} เรียบร้อยแล้ว`;
+      addNotificationLog(item.name, item.serial_number, status, alertMsg, 'Gmail (Manual)');
+      alert(`[ส่งแจ้งเตือนสำเร็จ]\n${alertMsg}`);
+      renderTable();
+    } else {
+      alert('เกิดข้อผิดพลาดในการส่งอีเมล: ' + data.message);
+    }
+  } catch (err) {
+    alert('ไม่สามารถส่งคำขอแจ้งเตือนไปยังเซิร์ฟเวอร์ได้');
+  }
+}
+
+// --- ระบบตรวจเช็กวันหมดประกันและยิงแจ้งเตือนเข้าอีเมลอัตโนมัติ 100% ---
+async function autoCheckAndNotify() {
+  const user = getCurrentUser();
+  // ส่งแจ้งเตือนอัตโนมัติเฉพาะบัญชีที่ยืนยัน OTP เรียบร้อยแล้วเท่านั้น
+  if (!user || !user.isVerified || !user.email) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  for (const item of equipments) {
+    if (!item.expiry_date) continue;
+
+    const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
+
+    // Key สำหรับล็อกว่าวันนี้ส่งแจ้งเตือนสถานะนี้ของอุปกรณ์ชิ้นนี้ไปแล้วหรือยัง (กันยิงซ้ำทุกครั้งที่กดรีเฟรชหน้า)
+    const notifyKey = `notified_${item.serial_number}_${status}_${todayStr}`;
+
+    // เงื่อนไขในการส่งอัตโนมัติ:
+    // 1. ใกล้หมดอายุ (status === 'EXPIRING' / days <= 7)
+    // 2. หมดอายุแล้ว (status === 'EXPIRED')
+    if ((status === 'EXPIRING' || status === 'EXPIRED') && !localStorage.getItem(notifyKey)) {
+      try {
+        const res = await fetch('/api/notify/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            deviceName: item.name,
+            serial: item.serial_number,
+            expiryDate: item.expiry_date,
+            daysLeft: days,
+            status: status
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          const logMsg = status === 'EXPIRED'
+            ? `[ระบบอัตโนมัติ] แจ้งเตือน: อุปกรณ์ ${item.name} หมดอายุการรับประกันแล้ว`
+            : `[ระบบอัตโนมัติ] แจ้งเตือน: อุปกรณ์ ${item.name} เหลือประกันอีก ${days} วัน`;
+
+          addNotificationLog(item.name, item.serial_number, status, logMsg, 'Gmail (Auto)');
+          localStorage.setItem(notifyKey, 'true');
+        }
+      } catch (err) {
+        console.error('Auto notification failed for:', item.name, err);
+      }
+    }
+  }
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 }
 
 // --- ฟังก์ชัน Modal และ Form ---
@@ -290,6 +515,12 @@ function saveNewEquipment(e) {
     document.getElementById('add-form').reset();
     toggleModal(false);
     renderTable();
+<<<<<<< HEAD
+=======
+
+    // เมื่อเพิ่มอุปกรณ์ใหม่ ตรวจเช็กเพื่อส่งแจ้งเตือนอัตโนมัติทันทีหากอุปกรณ์ที่เพิ่งเพิ่มมีประกันใกล้หมด/หมดแล้ว
+    autoCheckAndNotify();
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
   };
 
   if (file) {
@@ -325,10 +556,20 @@ function closePreviewModal() {
 
 // เริ่มต้นระบบเมื่อโหลดหน้าเว็บ
 document.addEventListener('DOMContentLoaded', () => {
+<<<<<<< HEAD
   autoCheckAndLog(equipments);
   renderTable();
   setInterval(() => {
     autoCheckAndLog(equipments);
     renderTable();
   }, 60000);
+=======
+  if (typeof autoCheckAndLog === 'function') {
+    autoCheckAndLog(equipments);
+  }
+  renderTable();
+
+  // รันระบบตรวจเช็กประกันอัตโนมัติทันทีที่เปิดเข้าหน้าเว็บ
+  autoCheckAndNotify();
+>>>>>>> 26f71f5 (Update automatic email notifications and Nodemailer setup)
 });
