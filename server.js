@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.routes');
@@ -10,15 +10,15 @@ const equipmentRoutes = require('./routes/equipments.routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// เรียกใช้งาน Resend API
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ตั้งค่า SendGrid API Key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// อ่านไฟล์ static (HTML, JS, CSS) จาก Root Directory
+// อ่านไฟล์ static จาก Root Directory
 app.use(express.static(__dirname));
 
 // หน้าแรกเปิด login.html
@@ -42,9 +42,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
     otpStore.set(email.toLowerCase(), { otp, expiresAt });
 
-    const { data, error } = await resend.emails.send({
-      from: 'Warranty Guard <onboarding@resend.dev>',
-      to: [email],
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_USER, // ใช้อีเมลที่คุณลงทะเบียนตั้งค่าไว้บน SendGrid / Gmail
       subject: 'รหัส OTP ยืนยันอีเมลสำหรับระบบ Warranty Guard',
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -56,17 +56,13 @@ app.post('/api/auth/send-otp', async (req, res) => {
           <p style="color: #64748b; font-size: 12px; margin-top: 16px;">รหัสนี้มีอายุการใช้งาน 5 นาที</p>
         </div>
       `
-    });
+    };
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return res.status(500).json({ success: false, message: 'ส่งอีเมลไม่สำเร็จ: ' + error.message });
-    }
-
+    await sgMail.send(msg);
     res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
   } catch (error) {
-    console.error('Server Error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+    console.error('SendGrid Error:', error.response ? error.response.body : error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมล' });
   }
 });
 
@@ -107,9 +103,9 @@ app.post('/api/notify/email', async (req, res) => {
       statusText = `[ด่วนมาก] เหลือเวลาเคลมประกันเพียง ${daysLeft} วันเท่านั้น!`;
     }
 
-    const { data, error } = await resend.emails.send({
-      from: 'Warranty Guard <onboarding@resend.dev>',
-      to: [email],
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_USER,
       subject: `[Warranty Guard] แจ้งเตือนสถานะประกัน: ${deviceName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -123,16 +119,12 @@ app.post('/api/notify/email', async (req, res) => {
           </div>
         </div>
       `
-    });
+    };
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return res.status(500).json({ success: false, message: 'ส่งอีเมลไม่สำเร็จ: ' + error.message });
-    }
-
+    await sgMail.send(msg);
     res.json({ success: true, message: 'ส่งอีเมลแจ้งเตือนสำเร็จ' });
   } catch (error) {
-    console.error('Server Error:', error);
+    console.error('SendGrid Error:', error.response ? error.response.body : error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมล' });
   }
 });
