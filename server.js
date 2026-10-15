@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth.routes');
@@ -9,6 +9,9 @@ const equipmentRoutes = require('./routes/equipments.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// เรียกใช้งาน Resend API
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -21,20 +24,6 @@ app.use(express.static(__dirname));
 // หน้าแรกเปิด login.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
-});
-
-// ตั้งค่า Nodemailer Transporter บังคับใช้ Port 587 (STARTTLS) เพื่อรองรับ Render
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // ใช้ STARTTLS บน Port 587
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
 });
 
 // พื้นที่เก็บ OTP ชั่วคราว
@@ -53,9 +42,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
     otpStore.set(email.toLowerCase(), { otp, expiresAt });
 
-    const mailOptions = {
-      from: `"Warranty Guard" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'Warranty Guard <onboarding@resend.dev>',
+      to: [email],
       subject: 'รหัส OTP ยืนยันอีเมลสำหรับระบบ Warranty Guard',
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -67,13 +56,17 @@ app.post('/api/auth/send-otp', async (req, res) => {
           <p style="color: #64748b; font-size: 12px; margin-top: 16px;">รหัสนี้มีอายุการใช้งาน 5 นาที</p>
         </div>
       `
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (error) {
+      console.error('Resend Error:', error);
+      return res.status(500).json({ success: false, message: 'ส่งอีเมลไม่สำเร็จ: ' + error.message });
+    }
+
     res.json({ success: true, message: 'ส่งรหัส OTP เรียบร้อยแล้ว' });
   } catch (error) {
-    console.error('Nodemailer Error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมล' });
+    console.error('Server Error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
   }
 });
 
@@ -114,9 +107,9 @@ app.post('/api/notify/email', async (req, res) => {
       statusText = `[ด่วนมาก] เหลือเวลาเคลมประกันเพียง ${daysLeft} วันเท่านั้น!`;
     }
 
-    const mailOptions = {
-      from: `"Warranty Guard" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'Warranty Guard <onboarding@resend.dev>',
+      to: [email],
       subject: `[Warranty Guard] แจ้งเตือนสถานะประกัน: ${deviceName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -130,12 +123,16 @@ app.post('/api/notify/email', async (req, res) => {
           </div>
         </div>
       `
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (error) {
+      console.error('Resend Error:', error);
+      return res.status(500).json({ success: false, message: 'ส่งอีเมลไม่สำเร็จ: ' + error.message });
+    }
+
     res.json({ success: true, message: 'ส่งอีเมลแจ้งเตือนสำเร็จ' });
   } catch (error) {
-    console.error('Nodemailer Error:', error);
+    console.error('Server Error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมล' });
   }
 });
