@@ -1,11 +1,76 @@
-const STORAGE_KEY = 'warranty_equipments';
-const LOG_STORAGE_KEY = 'warranty_notification_logs';
+// --- URL สำหรับยิงไปยัง Backend บน Render.com ---
+const API_BASE_URL = 'https://ultrasmooth.onrender.com';
 
-let equipments = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let notificationLogs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
-
+// --- ฟังก์ชันดึงข้อมูลผู้ใช้ปัจจุบันและจัดการ Storage Key แยกตาม Email บัญชี ---
 function getCurrentUser() {
-  return JSON.parse(localStorage.getItem('warranty_user') || 'null') || { email: 'user@example.com', isVerified: false };
+  const user = JSON.parse(localStorage.getItem('warranty_user') || 'null');
+  if (!user) return { email: 'guest@example.com', isVerified: false };
+  return user;
+}
+
+// สร้าง Storage Key โดยใช้ Email ของผู้ใช้ (แปลงเป็นตัวพิมพ์เล็กเสมอ)
+function getUserStorageKey() {
+  const user = getCurrentUser();
+  const email = (user.email || user.username || 'guest').toLowerCase().trim();
+  return `warranty_equipments_${email}`;
+}
+
+function getUserLogStorageKey() {
+  const user = getCurrentUser();
+  const email = (user.email || user.username || 'guest').toLowerCase().trim();
+  return `warranty_notification_logs_${email}`;
+}
+
+// ฟังก์ชันดึงและบันทึกข้อมูลเฉพาะบัญชีที่เข้าสู่ระบบ
+function getEquipments() {
+  const key = getUserStorageKey();
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function saveEquipments(data) {
+  const key = getUserStorageKey();
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function getNotificationLogs() {
+  const key = getUserLogStorageKey();
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function saveNotificationLogs(data) {
+  const key = getUserLogStorageKey();
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+// --- ฟังก์ชันคำนวณสถานะและวันคงเหลือ ---
+function calculateStatus(purchaseDate, expiryDate) {
+  if (!expiryDate) return { days: 0, percent: 0, status: 'EXPIRED' };
+
+  const start = new Date(purchaseDate).getTime();
+  const end = new Date(expiryDate).getTime();
+  const today = new Date().getTime();
+
+  const totalDuration = end - start;
+  const remainingDuration = end - today;
+
+  const days = Math.ceil(remainingDuration / (1000 * 60 * 60 * 24));
+  let percent = totalDuration > 0 ? Math.max(0, Math.min(100, Math.round((remainingDuration / totalDuration) * 100))) : 0;
+
+  let status = 'ACTIVE';
+  if (days <= 0) {
+    status = 'EXPIRED';
+    percent = 0;
+  } else if (days <= 7) {
+    status = 'EXPIRING';
+  }
+
+  return { days: days > 0 ? days : 0, percent, status };
+}
+
+// --- ฟังก์ชันเปิด-ปิด Dropdown Admin ---
+function toggleDropdown() {
+  const menu = document.getElementById('logout-menu');
+  if (menu) menu.classList.toggle('hidden');
 }
 
 // --- ระบบตั้งค่าบัญชีผู้ใช้ และ ขอ/ยืนยัน OTP ---
@@ -53,7 +118,7 @@ function closeUserSettingsModal() {
   if (otpGroup) otpGroup.classList.add('hidden');
 }
 
-// 1. กดขอ OTP ผ่าน Nodemailer / Gmail SMTP
+// 1. กดขอ OTP
 async function requestOTP() {
   const user = getCurrentUser();
   const btn = document.getElementById('btn-send-otp');
@@ -63,7 +128,7 @@ async function requestOTP() {
   }
 
   try {
-    const res = await fetch('/api/auth/send-otp', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email })
@@ -100,7 +165,7 @@ async function submitVerifyOTP() {
   }
 
   try {
-    const res = await fetch('/api/auth/verify-otp', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email, otp })
@@ -123,6 +188,7 @@ async function submitVerifyOTP() {
 
 // --- ระบบบันทึกประวัติการแจ้งเตือน (Logs) ---
 function addNotificationLog(deviceName, serial, type, message, channel = 'Gmail SMTP') {
+  const logs = getNotificationLogs();
   const newLog = {
     id: Date.now() + Math.random(),
     timestamp: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
@@ -132,15 +198,16 @@ function addNotificationLog(deviceName, serial, type, message, channel = 'Gmail 
     message,
     channel
   };
-  notificationLogs.unshift(newLog);
-  localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(notificationLogs));
+  logs.unshift(newLog);
+  saveNotificationLogs(logs);
   updateLogBadge();
 }
 
 function updateLogBadge() {
   const badge = document.getElementById('log-badge');
   if (!badge) return;
-  if (notificationLogs.length > 0) {
+  const logs = getNotificationLogs();
+  if (logs.length > 0) {
     badge.classList.remove('hidden');
   } else {
     badge.classList.add('hidden');
@@ -158,12 +225,13 @@ function renderLogList() {
   const container = document.getElementById('log-list-container');
   if (!container) return;
 
-  if (notificationLogs.length === 0) {
+  const logs = getNotificationLogs();
+  if (logs.length === 0) {
     container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">ยังไม่มีประวัติการส่งแจ้งเตือนในระบบ</div>`;
     return;
   }
 
-  container.innerHTML = notificationLogs.map(log => {
+  container.innerHTML = logs.map(log => {
     let tagColor = 'bg-slate-100 text-slate-600';
     let iconName = 'info';
 
@@ -204,8 +272,7 @@ function renderLogList() {
 
 function clearNotificationLogs() {
   if (confirm('คุณต้องการลบประวัติการแจ้งเตือนทั้งหมดหรือไม่?')) {
-    notificationLogs = [];
-    localStorage.removeItem(LOG_STORAGE_KEY);
+    saveNotificationLogs([]);
     renderLogList();
     updateLogBadge();
   }
@@ -218,8 +285,10 @@ function sanitizeSerialNumber(input) {
 function showFormError(msg) {
   const errBox = document.getElementById('form-error-box');
   const errMsg = document.getElementById('form-error-msg');
-  errMsg.textContent = msg;
-  errBox.classList.remove('hidden');
+  if (errBox && errMsg) {
+    errMsg.textContent = msg;
+    errBox.classList.remove('hidden');
+  }
 }
 
 function clearFormError() {
@@ -227,10 +296,12 @@ function clearFormError() {
   if (errBox) errBox.classList.add('hidden');
 }
 
+// --- ฟังก์ชันแสดงผลตารางอุปกรณ์ ---
 function renderTable() {
   const tbody = document.getElementById('table-body');
   if (!tbody) return;
 
+  const equipments = getEquipments();
   const searchBox = document.getElementById('search-box');
   const filterDropdown = document.getElementById('filter-dropdown');
   const q = searchBox ? searchBox.value.toLowerCase().trim() : '';
@@ -322,10 +393,10 @@ function renderTable() {
         <td class="py-3 px-3 text-center">${receiptBtn}</td>
         <td class="py-3 px-3 text-right">
           <div class="flex items-center justify-end gap-2">
-            <button onclick="triggerManualAlert(${item.id})" title="ส่งแจ้งเตือนเข้า Email ทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
+            <button onclick="triggerManualAlert('${item.id}')" title="ส่งแจ้งเตือนเข้า Email ทันที" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
               <i data-lucide="bell-ring" class="w-4 h-4"></i>
             </button>
-            <button onclick="deleteEquipment(${item.id})" class="text-rose-500 hover:text-rose-700 font-medium text-xs">ลบ</button>
+            <button onclick="deleteEquipment('${item.id}')" class="text-rose-500 hover:text-rose-700 font-medium text-xs">ลบ</button>
           </div>
         </td>
       </tr>
@@ -342,14 +413,16 @@ function applyFilters() {
 
 function deleteEquipment(id) {
   if (confirm('ยืนยันที่จะลบอุปกรณ์นี้หรือไม่?')) {
+    let equipments = getEquipments();
     equipments = equipments.filter(e => String(e.id) !== String(id));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(equipments));
+    saveEquipments(equipments);
     renderTable();
   }
 }
 
-// --- ปุ่มยิงส่งอีเมลแจ้งเตือนประกันแบบกดมือ (Manual) ---
+// --- ปุ่มส่งอีเมลแจ้งเตือนแบบกดมือ (Manual Alert) ---
 async function triggerManualAlert(id) {
+  const equipments = getEquipments();
   const item = equipments.find(e => String(e.id) === String(id));
   if (!item) return;
 
@@ -357,7 +430,7 @@ async function triggerManualAlert(id) {
   const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
 
   try {
-    const res = await fetch('/api/notify/email', {
+    const res = await fetch(`${API_BASE_URL}/api/notify/email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -384,11 +457,12 @@ async function triggerManualAlert(id) {
   }
 }
 
-// --- ระบบตรวจเช็กวันหมดประกันและยิงแจ้งเตือนเข้าอีเมลอัตโนมัติ 100% ---
+// --- ระบบตรวจเช็กวันหมดประกันและยิงแจ้งเตือนเข้าอีเมลอัตโนมัติ ---
 async function autoCheckAndNotify() {
   const user = getCurrentUser();
   if (!user || !user.isVerified || !user.email) return;
 
+  const equipments = getEquipments();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
@@ -397,11 +471,12 @@ async function autoCheckAndNotify() {
     if (!item.expiry_date) continue;
 
     const { days, status } = calculateStatus(item.purchase_date, item.expiry_date);
-    const notifyKey = `notified_${item.serial_number}_${status}_${todayStr}`;
+    const userKey = (user.email || 'user').toLowerCase().trim();
+    const notifyKey = `notified_${userKey}_${item.serial_number}_${status}_${todayStr}`;
 
     if ((status === 'EXPIRING' || status === 'EXPIRED') && !localStorage.getItem(notifyKey)) {
       try {
-        const res = await fetch('/api/notify/email', {
+        const res = await fetch(`${API_BASE_URL}/api/notify/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -430,10 +505,11 @@ async function autoCheckAndNotify() {
   }
 }
 
-// --- ฟังก์ชัน Modal และ Form ---
+// --- ฟังก์ชัน Modal และ บันทึกอุปกรณ์ใหม่ ---
 function toggleModal(open) {
   clearFormError();
-  document.getElementById('add-modal').classList.toggle('hidden', !open);
+  const modal = document.getElementById('add-modal');
+  if (modal) modal.classList.toggle('hidden', !open);
 }
 
 function saveNewEquipment(e) {
@@ -455,8 +531,9 @@ function saveNewEquipment(e) {
     return showFormError('Serial Number ไม่ถูกต้อง! (ใช้ A-Z, 0-9 และขีด - 4-40 ตัว)');
   }
 
+  const equipments = getEquipments();
   if (equipments.some(item => item.serial_number === serial)) {
-    return showFormError(`Serial Number "${serial}" นี้มีอยู่ในระบบแล้ว`);
+    return showFormError(`Serial Number "${serial}" นี้มีอยู่ในระบบของคุณแล้ว`);
   }
 
   if (new Date(expiryDate) <= new Date(purchaseDate)) {
@@ -468,7 +545,8 @@ function saveNewEquipment(e) {
   }
 
   const saveItem = (receiptBase64 = null) => {
-    equipments.unshift({
+    const list = getEquipments();
+    list.unshift({
       id: Date.now(),
       name,
       brand,
@@ -477,9 +555,11 @@ function saveNewEquipment(e) {
       expiry_date: expiryDate,
       receipt_image: receiptBase64
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(equipments));
+    saveEquipments(list);
     addNotificationLog(name, serial, 'ACTIVE', `เพิ่มอุปกรณ์ใหม่ ติดตามประกันถึง ${expiryDate}`);
-    document.getElementById('add-form').reset();
+    
+    const form = document.getElementById('add-form');
+    if (form) form.reset();
     toggleModal(false);
     renderTable();
     autoCheckAndNotify();
@@ -495,6 +575,7 @@ function saveNewEquipment(e) {
 }
 
 function openPreviewModal(id) {
+  const equipments = getEquipments();
   const item = equipments.find(e => String(e.id) === String(id));
   if (!item || !item.receipt_image) return;
 
@@ -513,21 +594,16 @@ function openPreviewModal(id) {
 }
 
 function closePreviewModal() {
-  document.getElementById('preview-modal').classList.add('hidden');
+  const modal = document.getElementById('preview-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 // เริ่มต้นระบบเมื่อโหลดหน้าเว็บ
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof autoCheckAndLog === 'function') {
-    autoCheckAndLog(equipments);
-  }
   renderTable();
   autoCheckAndNotify();
 
   setInterval(() => {
-    if (typeof autoCheckAndLog === 'function') {
-      autoCheckAndLog(equipments);
-    }
     renderTable();
   }, 60000);
 });
