@@ -15,22 +15,25 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
 // อ่านไฟล์ static (HTML, JS, CSS) จาก Root Directory
 app.use(express.static(__dirname));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // หน้าแรกเปิด login.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
 
-// ตั้งค่า Nodemailer Transporter ด้วย Gmail SMTP
+// ตั้งค่า Nodemailer Transporter บังคับใช้ Port 587 (STARTTLS) เพื่อรองรับ Render
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // ใช้ STARTTLS บน Port 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
